@@ -87,6 +87,144 @@ export interface User {
   accessToken: string;
 }
 
+/**
+ * List of standard intents that the app provides.
+ * @enum {string}
+ */
+export type StandardIntents =
+  /** App fires MAIN intent for queries like [talk to $app]. */
+  'actions.intent.MAIN' | 'assistant.intent.action.MAIN' |
+  /** App fires TEXT intent when action issues ask intent. */
+  'actions.intent.TEXT' | 'assistant.intent.action.TEXT' |
+  /** App fires PERMISSION intent when action invokes askForPermission. */
+  'actions.intent.PERMISSION' | 'assistant.intent.action.PERMISSION' |
+  /** App fires OPTION intent when user chooses from options provided. */
+  'actions.intent.OPTION' |
+  /** App fires TRANSACTION_REQUIREMENTS_CHECK intent when action sets up transaction. */
+  'actions.intent.TRANSACTION_REQUIREMENTS_CHECK' |
+  /** App fires DELIVERY_ADDRESS intent when action asks for delivery address. */
+  'actions.intent.DELIVERY_ADDRESS' |
+  /** App fires TRANSACTION_DECISION intent when action asks for transaction decision. */
+  'actions.intent.TRANSACTION_DECISION' |
+  /** App fires CONFIRMATION intent when requesting affirmation from user. */
+  'actions.intent.CONFIRMATION' |
+  /** App fires DATETIME intent when requesting date/time from user. */
+  'actions.intent.DATETIME' |
+  /** App fires SIGN_IN intent when requesting sign-in from user. */
+  'actions.intent.SIGN_IN';
+
+/**
+ * List of supported permissions the app supports.
+ * @enum {string}
+ */
+export type SupportedPermissions =
+  /**
+   * The user's name as defined in the
+   * {@link https://developers.google.com/actions/reference/conversation#UserProfile|UserProfile object}
+   */
+  'NAME' |
+  /**
+   * The location of the user's current device, as defined in the
+   * {@link https://developers.google.com/actions/reference/conversation#Location|Location object}.
+   */
+  'DEVICE_PRECISE_LOCATION' |
+  /**
+   * City and zipcode corresponding to the location of the user's current device, as defined in the
+   * {@link https://developers.google.com/actions/reference/conversation#Location|Location object}.
+   */
+  'DEVICE_COARSE_LOCATION';
+
+/**
+ * List of built-in argument names.
+ * @enum {string}
+ */
+export type BuiltInArgNames =
+  /** Permission granted argument. */
+  'PERMISSION' | 'permission_granted' |
+  /** Option selected argument. */
+  'OPTION' |
+  /** Transaction requirements check result argument. */
+  'TRANSACTION_REQUIREMENTS_CHECK_RESULT' |
+  /** Delivery address value argument. */
+  'DELIVERY_ADDRESS_VALUE' |
+  /** Transactions decision argument. */
+  'TRANSACTION_DECISION_VALUE' |
+  /** Confirmation argument. */
+  'CONFIRMATION' |
+  /** DateTime argument. */
+  'DATETIME' |
+  /** Sign in status argument. */
+  'SIGN_IN';
+
+/**
+ * List of possible conversation stages, as defined in the
+ * {@link https://developers.google.com/actions/reference/conversation#Conversation|Conversation object}.
+ * @enum {number}
+ */
+export type ConversationStages =
+  /**
+   * Unspecified conversation state.
+   */
+  'UNSPECIFIED' | 0 |
+  /**
+   * A new conversation.
+   */
+  'NEW' | 1 |
+  /**
+   * An active (ongoing) conversation.
+   */
+  'ACTIVE' | 2;
+
+/**
+ * List of surface capabilities supported by the app.
+ * @enum {string}
+ */
+export type SurfaceCapabilities =
+  /**
+   * The ability to output audio.
+   */
+  'actions.capability.AUDIO_OUTPUT' |
+  /**
+   * The ability to output on a screen
+   */
+  'actions.capability.SCREEN_OUTPUT';
+
+/**
+ * List of possible user input types.
+ * @enum {number}
+ */
+export type InputTypes =
+  /**
+   * Unspecified.
+   */
+  'UNSPECIFIED' | 0 |
+  /**
+   * Input given by touch.
+   */
+  'TOUCH' | 1 |
+  /**
+   * Input given by voice (spoken).
+   */
+  'VOICE' | 2 |
+  /**
+   * Input given by keyboard (typed).
+   */
+  'KEYBOARD' | 3;
+
+/**
+ * List of possible sign in result status values.
+ * @enum {string}
+ */
+export type SignInStatus =
+  // Unknown status.
+  'SIGN_IN_STATUS_UNSPECIFIED' |
+  // User successfully completed the account linking.
+  'OK' |
+  // Cancelled or dismissed account linking.
+  'CANCELLED' |
+  // System or network error.
+  'ERROR';
+
 export class AssistantApp {
   /**
    * The session state.
@@ -106,25 +244,25 @@ export class AssistantApp {
    */
   readonly StandardIntents: {
     /** App fires MAIN intent for queries like [talk to $app]. */
-    MAIN: 'actions.intent.MAIN' | 'assistant.intent.action.MAIN',
+    MAIN: StandardIntents,
     /** App fires TEXT intent when action issues ask intent. */
-    TEXT: 'actions.intent.TEXT' | 'assistant.intent.action.TEXT',
+    TEXT: StandardIntents,
     /** App fires PERMISSION intent when action invokes askForPermission. */
-    PERMISSION: 'actions.intent.PERMISSION' | 'assistant.intent.action.PERMISSION',
+    PERMISSION: StandardIntents,
     /** App fires OPTION intent when user chooses from options provided. */
-    OPTION: 'actions.intent.OPTION',
+    OPTION: StandardIntents,
     /** App fires TRANSACTION_REQUIREMENTS_CHECK intent when action sets up transaction. */
-    TRANSACTION_REQUIREMENTS_CHECK: 'actions.intent.TRANSACTION_REQUIREMENTS_CHECK',
+    TRANSACTION_REQUIREMENTS_CHECK: StandardIntents,
     /** App fires DELIVERY_ADDRESS intent when action asks for delivery address. */
-    DELIVERY_ADDRESS: 'actions.intent.DELIVERY_ADDRESS',
+    DELIVERY_ADDRESS: StandardIntents,
     /** App fires TRANSACTION_DECISION intent when action asks for transaction decision. */
-    TRANSACTION_DECISION: 'actions.intent.TRANSACTION_DECISION',
+    TRANSACTION_DECISION: StandardIntents,
     /** App fires CONFIRMATION intent when requesting affirmation from user. */
-    CONFIRMATION: 'actions.intent.CONFIRMATION',
+    CONFIRMATION: StandardIntents,
     /** App fires DATETIME intent when requesting date/time from user. */
-    DATETIME: 'actions.intent.DATETIME',
+    DATETIME: StandardIntents,
     /** App fires SIGN_IN intent when requesting sign-in from user. */
-    SIGN_IN: 'actions.intent.SIGN_IN',
+    SIGN_IN: StandardIntents,
   };
 
   /**
@@ -138,17 +276,17 @@ export class AssistantApp {
      * The user's name as defined in the
      * {@link https://developers.google.com/actions/reference/conversation#UserProfile|UserProfile object}
      */
-    NAME: 'NAME',
+    NAME: SupportedPermissions,
     /**
      * The location of the user's current device, as defined in the
      * {@link https://developers.google.com/actions/reference/conversation#Location|Location object}.
      */
-    DEVICE_PRECISE_LOCATION: 'DEVICE_PRECISE_LOCATION',
+    DEVICE_PRECISE_LOCATION: SupportedPermissions,
     /**
      * City and zipcode corresponding to the location of the user's current device, as defined in the
      * {@link https://developers.google.com/actions/reference/conversation#Location|Location object}.
      */
-    DEVICE_COARSE_LOCATION: 'DEVICE_COARSE_LOCATION',
+    DEVICE_COARSE_LOCATION: SupportedPermissions,
   };
 
   /**
@@ -159,21 +297,21 @@ export class AssistantApp {
    */
   readonly BuiltInArgNames: {
     /** Permission granted argument. */
-    PERMISSION_GRANTED: 'PERMISSION' | 'permission_granted',
+    PERMISSION_GRANTED: BuiltInArgNames,
     /** Option selected argument. */
-    OPTION: 'OPTION',
+    OPTION: BuiltInArgNames,
     /** Transaction requirements check result argument. */
-    TRANSACTION_REQ_CHECK_RESULT: 'TRANSACTION_REQUIREMENTS_CHECK_RESULT',
+    TRANSACTION_REQ_CHECK_RESULT: BuiltInArgNames,
     /** Delivery address value argument. */
-    DELIVERY_ADDRESS_VALUE: 'DELIVERY_ADDRESS_VALUE',
+    DELIVERY_ADDRESS_VALUE: BuiltInArgNames,
     /** Transactions decision argument. */
-    TRANSACTION_DECISION_VALUE: 'TRANSACTION_DECISION_VALUE',
+    TRANSACTION_DECISION_VALUE: BuiltInArgNames,
     /** Confirmation argument. */
-    CONFIRMATION: 'CONFIRMATION',
+    CONFIRMATION: BuiltInArgNames,
     /** DateTime argument. */
-    DATETIME: 'DATETIME',
+    DATETIME: BuiltInArgNames,
     /** Sign in status argument. */
-    SIGN_IN: 'SIGN_IN',
+    SIGN_IN: BuiltInArgNames,
   };
 
   /**
@@ -187,15 +325,15 @@ export class AssistantApp {
     /**
      * Unspecified conversation state.
      */
-    UNSPECIFIED: 'UNSPECIFIED' | 0,
+    UNSPECIFIED: ConversationStages,
     /**
      * A new conversation.
      */
-    NEW: 'NEW' | 1,
+    NEW: ConversationStages,
     /**
      * An active (ongoing) conversation.
      */
-    ACTIVE: 'ACTIVE' | 2,
+    ACTIVE: ConversationStages,
   };
 
   /**
@@ -208,11 +346,11 @@ export class AssistantApp {
     /**
      * The ability to output audio.
      */
-    AUDIO_OUTPUT: 'actions.capability.AUDIO_OUTPUT',
+    AUDIO_OUTPUT: SurfaceCapabilities,
     /**
      * The ability to output on a screen
      */
-    SCREEN_OUTPUT: 'actions.capability.SCREEN_OUTPUT',
+    SCREEN_OUTPUT: SurfaceCapabilities,
   };
 
   /**
@@ -225,19 +363,19 @@ export class AssistantApp {
     /**
      * Unspecified.
      */
-    UNSPECIFIED: 'UNSPECIFIED' | 0,
+    UNSPECIFIED: InputTypes,
     /**
      * Input given by touch.
      */
-    TOUCH: 'TOUCH' | 1,
+    TOUCH: InputTypes,
     /**
      * Input given by voice (spoken).
      */
-    VOICE: 'VOICE' | 2,
+    VOICE: InputTypes,
     /**
      * Input given by keyboard (typed).
      */
-    KEYBOARD: 'KEYBOARD' | 3,
+    KEYBOARD: InputTypes,
   };
 
   /**
@@ -248,13 +386,13 @@ export class AssistantApp {
    */
   readonly SignInStatus: {
     // Unknown status.
-    UNSPECIFIED: 'SIGN_IN_STATUS_UNSPECIFIED',
+    UNSPECIFIED: SignInStatus,
     // User successfully completed the account linking.
-    OK: 'OK',
+    OK: SignInStatus,
     // Cancelled or dismissed account linking.
-    CANCELLED: 'CANCELLED',
+    CANCELLED: SignInStatus,
     // System or network error.
-    ERROR: 'ERROR',
+    ERROR: SignInStatus,
   };
 
   /**
