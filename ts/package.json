@@ -1,0 +1,62 @@
+{
+  "name": "actions-on-google-ts",
+  "description": "Actions on Google Client Library for Node.js (TypeScript fork)",
+  "main": "build/actions-on-google.js",
+  "types": "typings/actions-on-google.d.ts",
+  "version": "1.1.1-0",
+  "license": "Apache-2.0",
+  "author": "Google Inc.",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "mkdir -p build && cp -r ../*.js ../utils build && babel -d . build/{,utils/}*.js",
+    "clean": "rm -fr build",
+    "lint": "semistandard --fix \"**/*.js\"",
+    "test": "npm run lint && ./node_modules/.bin/mocha --reporter spec ./test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/actions-on-google/node-actions-on-google-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pilwon/node-actions-on-google-ts/issues"
+  },
+  "homepage": "https://github.com/pilwon/node-actions-on-google-ts/tree/ts/ts",
+  "keywords": [
+    "google",
+    "google actions",
+    "google assistant",
+    "client library",
+    "ts",
+    "typescript",
+    "fork"
+  ],
+  "semistandard": {
+    "globals": [
+      "after",
+      "afterEach",
+      "before",
+      "beforeEach",
+      "describe",
+      "it"
+    ]
+  },
+  "dependencies": {
+    "debug": "^2.2.0",
+    "lodash.camelcase": "^4.3.0",
+    "lodash.snakecase": "^4.1.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-latest": "^6.24.1",
+    "chai": "^3.5.0",
+    "chai-spies": "^0.7.1",
+    "mocha": "^3.0.2",
+    "winston": "2.2.0",
+    "semistandard": "^9.1.0"
+  },
+  "babel": {
+    "presets": ["latest"]
+  }
+}
