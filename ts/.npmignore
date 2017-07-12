@@ -1,5 +1,1 @@
-*
-!/build/
-!/typings/
-!/package.json
-!/README.md
+/.editorconfig
