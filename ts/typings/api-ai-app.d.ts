@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import { AssistantApp, DateTime, DeviceLocation, User } from './assistant-app';
+import { AssistantApp, DateTime, DeviceLocation, SessionStartedFunction, User } from './assistant-app';
 import { Carousel, List, RichResponse, SimpleResponse } from './response-builder';
 import { DeliveryAddress, TransactionDecision } from './transactions';
 
@@ -25,6 +25,12 @@ export interface Context {
   lifespan: number;
 }
 
+export interface ApiAiAppOptions {
+  request: Request;
+  response: Response;
+  sessionStarted?: SessionStartedFunction;
+}
+
 /**
  * Constructor for ApiAiApp object. To be used in the API.AI
  * fulfillment webhook logic.
@@ -43,7 +49,7 @@ export interface Context {
  * @apiai
  */
 export class ApiAiApp extends AssistantApp {
-  constructor(options: {request: Request, response: Response, sessionStarted?: Function});
+  constructor(options: ApiAiAppOptions);
 
   /**
    * Gets the {@link User} object.

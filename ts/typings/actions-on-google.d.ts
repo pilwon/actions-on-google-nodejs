@@ -19,12 +19,12 @@
  * https://developers.google.com/actions/
  */
 
-export { AssistantApp, State } from './assistant-app';
-export { default as ActionsSdkApp } from './actions-sdk-app';
-export { default as ApiAiApp } from './api-ai-app';
+export { AssistantApp, AssistantAppOptions, RequestHandler, SessionStartedFunction, State } from './assistant-app';
+export { ActionsSdkApp, ActionsSdkAppOptions } from './actions-sdk-app';
+export { ApiAiApp, ApiAiAppOptions } from './api-ai-app';
 export { default as Transactions } from './transactions';
 export { default as Responses } from './response-builder';
 // Backwards compatibility
 export { AssistantApp as Assistant } from './assistant-app';
-export { default as ActionsSdkAssistant } from './actions-sdk-app';
-export { default as ApiAiAssistant } from './api-ai-app';
+export { ActionsSdkApp as ActionsSdkAssistant } from './actions-sdk-app';
+export { ApiAiApp as ApiAiAssistant } from './api-ai-app';

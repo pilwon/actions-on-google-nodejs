@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import { AssistantApp, DateTime, DeviceLocation, User } from './assistant-app';
+import { AssistantApp, DateTime, DeviceLocation, SessionStartedFunction, User } from './assistant-app';
 import { Carousel, List, RichResponse, SimpleResponse } from './response-builder';
 import { DeliveryAddress, TransactionDecision } from './transactions';
 
@@ -12,6 +12,12 @@ import { DeliveryAddress, TransactionDecision } from './transactions';
 // ---------------------------------------------------------------------------
 //                   Actions SDK support
 // ---------------------------------------------------------------------------
+
+export interface ActionsSdkAppOptions {
+  request: Request;
+  response: Response;
+  sessionStarted?: SessionStartedFunction;
+}
 
 /**
  * Constructor for ActionsSdkApp object. To be used in the Actions SDK
@@ -29,7 +35,7 @@ import { DeliveryAddress, TransactionDecision } from './transactions';
  * @actionssdk
  */
 export class ActionsSdkApp extends AssistantApp {
-  constructor(options: {request: Request, response: Response, sessionStarted?: Function});
+  constructor(options: ActionsSdkAppOptions);
 
   /*
   * Gets the request Conversation API version.

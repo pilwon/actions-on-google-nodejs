@@ -225,6 +225,16 @@ export type SignInStatus =
   // System or network error.
   'ERROR';
 
+export type SessionStartedFunction = () => any;
+
+export interface AssistantAppOptions {
+  request: Request;
+  response: Response;
+  sessionStarted?: SessionStartedFunction;
+}
+
+export type RequestHandler = (app: AssistantApp) => any;
+
 export class AssistantApp {
   /**
    * The session state.
@@ -411,7 +421,7 @@ export class AssistantApp {
    * @param {Object} options.response Express HTTP response object.
    * @param {Function=} options.sessionStarted Function callback when session starts.
    */
-  constructor(options: {request: Request, response: Response, sessionStarted?: Function});
+  constructor(options: AssistantAppOptions);
 
   // ---------------------------------------------------------------------------
   //                   Public APIs
@@ -472,7 +482,7 @@ export class AssistantApp {
    * @actionssdk
    * @apiai
    */
-  handleRequest(handler: Function | Map<string, Function>): void;
+  handleRequest(handler?: RequestHandler | Map<string, RequestHandler>): void;
 
   /**
    * Equivalent to {@link AssistantApp#askForPermission|askForPermission},
