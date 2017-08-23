@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 
 import { BasicCard, Carousel, List, OptionItem, RichResponse } from './response-builder';
 import { ActionPaymentTransactionConfig, Cart, GooglePaymentTransactionConfig,
-         LineItem, Order, OrderUpdate, TransactionDecision, TransactionValues } from './transactions';
+         LineItem, Location, Order, OrderUpdate, TransactionDecision,
+         TransactionValues } from './transactions';
 
 /**
  * User provided date/time info.
@@ -918,7 +919,7 @@ export class AssistantApp {
    * @return {Object} Argument value matching argName
    *     or null if no matching argument.
    */
-  getArgumentCommon(argName): object;
+  getArgumentCommon(argName: string): object;
 
   /**
    * Gets transactability of user. Only use after calling
