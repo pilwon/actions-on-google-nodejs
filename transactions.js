@@ -24,6 +24,9 @@
 const Debug = require('debug');
 const error = Debug('actions-on-google:error');
 
+const ORDER_LOCATION_LIMIT = 2;
+const GENERIC_EXTENSION_TYPE = 'type.googleapis.com/google.actions.v2.orders.GenericExtension';
+
 /**
  * Price type.
  * @typedef {Object} Price
@@ -85,6 +88,7 @@ const error = Debug('actions-on-google:error');
  * @property {boolean} type - One of Transactions.PaymentType.
  * @property {string} displayName - The name of the instrument displayed on
  *     receipt. For example, for card payment, could be "VISA-1234".
+ * @property {CustomerInfoOptions=} customerInfoOptions
  */
 
 /**
@@ -99,20 +103,26 @@ const error = Debug('actions-on-google:error');
  *     Must be any number of Transactions.CardNetwork.
  * @property {boolean} prepaidCardDisallowed - True if prepaid cards are not
  *     allowed for transaction.
+ * @property {CustomerInfoOptions=} customerInfoOptions
+ */
+
+ /**
+ * Customer information requested as part of the transaction
+ * @typedef {Object} CustomerInfoOptions
+ * @property {Array<string>} customerInfoProperties - one of
+ *    Transactions.CustomerInfoProperties
  */
 
 /**
- * Delivery address returned when calling getDeliveryAddress().
- * @typedef {Object} DeliveryAddress
- * @property {string} userDecision. - Either Transactions.ConfirmationDecision.ACCEPTED
- *     or Transactions.ConfirmationDecision.REJECTED.
+ * Generic Location type.
+ * @typedef {Object} Location
  * @property {Object} postalAddress
  * @property {string} postalAddress.regionCode
  * @property {string} postalAddress.languageCode
  * @property {string} postalAddress.postalCode
  * @property {string} postalAddress.administrativeArea
  * @property {string} postalAddress.locality
- * @property {string} postalAddress.addressLines
+ * @property {Array<string>} postalAddress.addressLines
  * @property {string} postalAddress.recipients
  * @property {string} phoneNumber
  * @property {string} notes
@@ -268,6 +278,14 @@ const TransactionValues = {
     GIFT_CARD: 'GIFT_CARD'
   },
   /**
+   * List of customer information properties that can be requested.
+   * @readonly
+   * @enum {string}
+   */
+  CustomerInfoProperties: {
+    EMAIL: 'EMAIL'
+  },
+  /**
    * List of possible order confirmation user decisions
    * @readonly
    * @enum {string}
@@ -297,10 +315,6 @@ const TransactionValues = {
    * @enum {string}
    */
   OrderState: {
-    /**
-     * Order was confirmed by user.
-     */
-    CREATED: 'CREATED',
     /**
      * Order was rejected.
      */
@@ -441,9 +455,8 @@ const TransactionValues = {
     /**
      * Transactions are not supported for current region/country.
      */
-    REGION_NOT_SUPPORTED: 'ASSISTANT_SURFACE_NOT_SUPPORTED'
+    REGION_NOT_SUPPORTED: 'REGION_NOT_SUPPORTED'
   },
-
   /**
    * List of possible user decisions to give delivery address.
    * @readonly
@@ -462,8 +475,69 @@ const TransactionValues = {
      * User denied to give delivery address.
      */
     REJECTED: 'REJECTED'
+  },
+  /**
+   * List of possible order location types.
+   * @readonly
+   * @enum {string}
+   */
+  LocationType: {
+    /**
+     * Unknown.
+     */
+    UNKNOWN: 'UNKNOWN',
+    /**
+     * Delivery location for an order.
+     */
+    DELIVERY: 'DELIVERY',
+    /**
+     * Business location of order provider.
+     */
+    BUSINESS: 'BUSINESS',
+    /**
+     * Origin of the order.
+     */
+    ORIGIN: 'ORIGIN',
+    /**
+     * Destination of the order.
+     */
+    DESTINATION: 'DESTINATION'
+  },
+  /**
+   * List of possible order time types.
+   * @readonly
+   * @enum {string}
+   */
+  TimeType: {
+    /**
+     * Unknown.
+     */
+    UNKNOWN: 'UNKNOWN',
+    /**
+     * Date of delivery for the order.
+     */
+    DELIVERY_DATE: 'DELIVERY_DATE',
+    /**
+     * Estimated Time of Arrival for order.
+     */
+    ETA: 'ETA',
+    /**
+     * Reservation time.
+     */
+    RESERVATION_SLOT: 'RESERVATION_SLOT'
   }
 };
+
+/**
+ * Valid keys for the TransactionValues.OrderStateInfo enum.
+ * @readonly
+ * @enum {string}
+ */
+const reverseOrderStateInfo = Object.keys(TransactionValues.OrderStateInfo)
+  .reduce((reverseValues, infoType) => {
+    reverseValues[TransactionValues.OrderStateInfo[infoType]] = infoType;
+    return reverseValues;
+  }, {});
 
 /**
  * Class for initializing and constructing Order with chainable interface.
@@ -510,6 +584,13 @@ const Order = class {
      * @type {Price}
      */
     this.totalPrice = undefined;
+
+    /**
+     * Extensions for this order. Used for vertical-specific order attributes,
+     * like times and locations.
+     * @type {Object}
+     */
+    this.extension = undefined;
   }
 
   /**
@@ -610,7 +691,7 @@ const Order = class {
       error('currencyCode cannot be empty');
       return this;
     }
-    if (!units) {
+    if (typeof units !== 'number' || Number.isNaN(units)) {
       error('Invalid units');
       return this;
     }
@@ -622,6 +703,65 @@ const Order = class {
         nanos: nanos || 0
       }
     };
+    return this;
+  }
+
+  /**
+   * Adds an associated location to the order. Up to 2 locations can be added.
+   *
+   * @param {string} type One of TransactionValues.LocationType.
+   * @param {Location} location Location to add.
+   * @return {Order} Returns current constructed Order.
+   */
+  addLocation (type, location) {
+    if (!type) {
+      error('type cannot be empty');
+      return this;
+    }
+    if (!location) {
+      error('location cannot be null');
+      return this;
+    }
+    if (!this.extension) {
+      this.extension = {
+        '@type': GENERIC_EXTENSION_TYPE
+      };
+    }
+    if (!this.extension.locations) {
+      this.extension.locations = [];
+    }
+    if (this.extension.locations.length >= ORDER_LOCATION_LIMIT) {
+      error('Order can have no more than ' + ORDER_LOCATION_LIMIT +
+        ' associated locations');
+      return this;
+    }
+    this.extension.locations.push({ type, location });
+    return this;
+  }
+
+  /**
+   * Sets an associated time to the order.
+   *
+   * @param {string} type One of TransactionValues.TimeType.
+   * @param {string} time Time to add. Time should be ISO 8601 representation
+   *     of time value. Could be date, datetime, or duration.
+   * @return {Order} Returns current constructed Order.
+   */
+  setTime (type, time) {
+    if (!type) {
+      error('type cannot be empty');
+      return this;
+    }
+    if (!time) {
+      error('time cannot be empty');
+      return this;
+    }
+    if (!this.extension) {
+      this.extension = {
+        '@type': GENERIC_EXTENSION_TYPE
+      };
+    }
+    this.extension.time = { type, time_iso8601: time };
     return this;
   }
 };
@@ -883,7 +1023,7 @@ const LineItem = class {
       error('currencyCode cannot be empty');
       return this;
     }
-    if (!units) {
+    if (typeof units !== 'number' || Number.isNaN(units)) {
       error('Invalid units');
       return this;
     }
@@ -1124,7 +1264,7 @@ const OrderUpdate = class {
       error('currencyCode cannot be empty');
       return this;
     }
-    if (!units) {
+    if (typeof units !== 'number' || Number.isNaN(units)) {
       error('Invalid units');
       return this;
     }
@@ -1198,7 +1338,7 @@ const OrderUpdate = class {
       error('currencyCode cannot be empty');
       return this;
     }
-    if (!units) {
+    if (typeof units !== 'number' || Number.isNaN(units)) {
       error('Invalid units');
       return this;
     }
@@ -1274,7 +1414,7 @@ const OrderUpdate = class {
    * @return {OrderUpdate} Returns current constructed OrderUpdate.
    */
   setInfo (type, data) {
-    if (!type || !TransactionValues.OrderStateInfo[type]) {
+    if (!type || !reverseOrderStateInfo[type]) {
       error('Invalid info type');
       return this;
     }
@@ -1288,7 +1428,7 @@ const OrderUpdate = class {
       delete this[TransactionValues.OrderStateInfo[infoType]];
     }
 
-    this[TransactionValues.OrderStateInfo[type]] = data;
+    this[type] = data;
     return this;
   }
 };

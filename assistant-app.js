@@ -1,5 +1,5 @@
 /**
- * Copyright 201 Google Inc. All Rights Reserved.
+ * Copyright 2017 Google Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,14 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-
-/**
- * The Actions on Google client library AssistantApp base class.
- *
- * This class contains the methods that are shared between platforms to support the conversation API
- * protocol from Assistant. It also exports the 'State' class as a helper to represent states by
- * name.
  */
 
 'use strict';
@@ -61,17 +53,26 @@ debug.log = console.log.bind(console);
 error.log = console.error.bind(console);
 
 /**
- * Constructor for AssistantApp object.
- * Should not be instantiated; rather instantiate one of the subclasses
- * {@link ActionsSdkApp} or {@link ApiAiApp}.
+ * The Actions on Google client library AssistantApp base class.
  *
- * @param {Object} options JSON configuration.
- * @param {Object} options.request Express HTTP request object.
- * @param {Object} options.response Express HTTP response object.
- * @param {Function=} options.sessionStarted Function callback when session starts.
+ * This class contains the methods that are shared between platforms to support the conversation API
+ * protocol from Assistant. It also exports the 'State' class as a helper to represent states by
+ * name.
  */
-const AssistantApp = class {
-  constructor (options) {
+class AssistantApp {
+  /**
+   * Constructor for AssistantApp object.
+   * Should not be instantiated; rather instantiate one of the subclasses
+   * {@link ActionsSdkApp} or {@link ApiAiApp}.
+   *
+   * @param {Object} options JSON configuration.
+   * @param {Object} options.request Express HTTP request object.
+   * @param {Object} options.response Express HTTP response object.
+   * @param {Function=} options.sessionStarted Function callback when session starts.
+   * @param {function(): *} requestData Function that returns the
+   *     request data object to be processed.
+   */
+  constructor (options, requestData) {
     debug('AssistantApp constructor');
 
     if (!options) {
@@ -419,6 +420,11 @@ const AssistantApp = class {
      * @type {object}
      */
     this.Transactions = TransactionValues;
+
+    this.requestData = requestData;
+
+    // Extracts the data from the request
+    this.extractData_();
   }
 
   // ---------------------------------------------------------------------------
@@ -486,7 +492,6 @@ const AssistantApp = class {
       this.handleError_('request handler can NOT be empty.');
       return;
     }
-    this.extractData_();
     if (typeof handler === 'function') {
       debug('handleRequest: function');
       // simple function handler
@@ -738,6 +743,13 @@ const AssistantApp = class {
       transactionDecisionValueSpec.paymentOptions =
         this.buildPaymentOptions_(transactionConfig);
     }
+    if (transactionConfig && transactionConfig.customerInfoOptions) {
+      if (!transactionDecisionValueSpec.orderOptions) {
+        transactionDecisionValueSpec.orderOptions = {};
+      }
+      transactionDecisionValueSpec.orderOptions.customerInfoOptions =
+        transactionConfig.customerInfoOptions;
+    }
     return this.fulfillTransactionDecision_(transactionDecisionValueSpec,
       dialogState);
   }
@@ -757,8 +769,8 @@ const AssistantApp = class {
    * Read more:
    *
    * * {@link https://developers.google.com/actions/reference/conversation#ExpectedIntent|Supported Permissions}
-   * * Check if the permission has been granted with {@link ActionsSdkApp#isPermissionGranted|isPermissionsGranted}
-   * * {@link ActionsSdkApp#getDeviceLocation|getDeviceLocation}
+   * * Check if the permission has been granted with {@link AssistantApp#isPermissionGranted|isPermissionsGranted}
+   * * {@link AssistantApp#getDeviceLocation|getDeviceLocation}
    * * {@link AssistantApp#getUserName|getUserName}
    *
    * @example
@@ -800,6 +812,34 @@ const AssistantApp = class {
     debug('askForPermission: context=%s, permission=%s, dialogState=%s',
       context, permission, JSON.stringify(dialogState));
     return this.askForPermissions(context, [permission], dialogState);
+  }
+
+  /**
+   * Returns true if the request follows a previous request asking for
+   * permission from the user and the user granted the permission(s). Otherwise,
+   * false. Use with {@link AssistantApp#askForPermissions|askForPermissions}.
+   *
+   * @example
+   * const app = new ActionsSdkApp({request: request, response: response});
+   * // or
+   * const app = new ApiAiApp({request: request, response: response});
+   * app.askForPermissions("To get you a ride", [
+   *   app.SupportedPermissions.NAME,
+   *   app.SupportedPermissions.DEVICE_PRECISE_LOCATION
+   * ]);
+   * // ...
+   * // In response handler for subsequent intent:
+   * if (app.isPermissionGranted()) {
+   *  // Use the requested permission(s) to get the user a ride
+   * }
+   *
+   * @return {boolean} true if permissions granted.
+   * @apiai
+   * @actionssdk
+   */
+  isPermissionGranted () {
+    debug('isPermissionGranted');
+    return this.getArgumentCommon(this.BuiltInArgNames.PERMISSION_GRANTED) === 'true';
   }
 
   /**
@@ -905,7 +945,15 @@ const AssistantApp = class {
   }
 
   /**
-   * Asks user for a timezone-agnostic date and time.
+   * Hands the user off to a web sign in flow. App sign in and OAuth credentials
+   * are set in the {@link https://console.actions.google.com|Actions Console}.
+   * Retrieve the access token in subsequent intents using
+   * app.getUser().accessToken.
+   *
+   * Note: Currently this API requires enabling the app for Transactions APIs.
+   * To do this, fill out the App Info section of the Actions Console project
+   * and check the box indicating the use of Transactions under "Privacy and
+   * consent".
    *
    * @example
    * const app = new ApiAiApp({ request, response });
@@ -985,6 +1033,46 @@ const AssistantApp = class {
    */
 
   /**
+   * Gets the {@link User} object.
+   * The user object contains information about the user, including
+   * a string identifier and personal information (requires requesting permissions,
+   * see {@link AssistantApp#askForPermissions|askForPermissions}).
+   *
+   * @example
+   * const app = new ApiAiApp({request: request, response: response});
+   * // or
+   * const app = new ActionsSdkApp({request: request, response: response});
+   * const userId = app.getUser().userId;
+   *
+   * @return {User} Null if no value.
+   * @actionssdk
+   * @apiai
+   */
+  getUser () {
+    debug('getUser');
+    const data = this.requestData();
+
+    if (!data || !data.user) {
+      error('No user object');
+      return null;
+    }
+
+    const requestUser = data.user;
+
+    // User object includes original API properties
+    const user = Object.assign({}, requestUser);
+
+    // Backwards compatibility
+    user.user_id = user.userId;
+    user.access_token = user.accessToken;
+
+    const profile = user.profile;
+    user.userName = profile ? Object.assign({}, profile) : null;
+
+    return user;
+  }
+
+  /**
    * If granted permission to user's name in previous intent, returns user's
    * display name, family name, and given name. If name info is unavailable,
    * returns null.
@@ -1017,7 +1105,264 @@ const AssistantApp = class {
    */
   getUserName () {
     debug('getUserName');
-    return this.getUser().userName;
+    return this.getUser() && this.getUser().userName
+      ? this.getUser().userName : null;
+  }
+
+  /**
+   * Gets the user locale. Returned string represents the regional language
+   * information of the user set in their Assistant settings.
+   * For example, 'en-US' represents US English.
+   *
+   * @example
+   * const app = new ApiAiApp({request, response});
+   * const locale = app.getUserLocale();
+   *
+   * @return {string} User's locale, e.g. 'en-US'. Null if no locale given.
+   * @actionssdk
+   * @apiai
+   */
+  getUserLocale () {
+    debug('getUserLocale');
+    return this.getUser() && this.getUser().locale
+      ? this.getUser().locale : null;
+  }
+
+  /**
+   * If granted permission to device's location in previous intent, returns device's
+   * location (see {@link AssistantApp#askForPermissions|askForPermissions}).
+   * If device info is unavailable, returns null.
+   *
+   * @example
+   * const app = new ApiAiApp({request: req, response: res});
+   * // or
+   * const app = new ActionsSdkApp({request: req, response: res});
+   * app.askForPermission("To get you a ride",
+   *   app.SupportedPermissions.DEVICE_PRECISE_LOCATION);
+   * // ...
+   * // In response handler for permissions fallback intent:
+   * if (app.isPermissionGranted()) {
+   *   sendCarTo(app.getDeviceLocation().coordinates);
+   * }
+   *
+   * @return {DeviceLocation} Null if location permission is not granted.
+   * @actionssdk
+   * @apiai
+   */
+  getDeviceLocation () {
+    debug('getDeviceLocation');
+    const data = this.requestData();
+    if (!data || !data.device || !data.device.location) {
+      return null;
+    }
+    const deviceLocation = Object.assign({}, data.device.location);
+    deviceLocation.address = deviceLocation.formattedAddress;
+    return deviceLocation;
+  }
+
+  /**
+   * Gets type of input used for this request.
+   *
+   * @return {number} One of AssistantApp.InputTypes.
+   *     Null if no input type given.
+   * @apiai
+   * @actionssdk
+   */
+  getInputType () {
+    debug('getInputType');
+    const data = this.requestData();
+    if (data && data.inputs) {
+      for (const input of data.inputs) {
+        if (input.rawInputs) {
+          for (const rawInput of input.rawInputs) {
+            if (rawInput.inputType) {
+              return rawInput.inputType;
+            }
+          }
+        }
+      }
+    }
+    error('No input type in incoming request');
+    return null;
+  }
+
+  /**
+   * Get the argument value by name from the current intent.
+   * If the argument is included in originalRequest, and is not a text argument,
+   * the entire argument object is returned.
+   *
+   * Note: If incoming request is using an API version under 2 (e.g. 'v1'),
+   * the argument object will be in Proto2 format (snake_case, etc).
+   *
+   * @example
+   * const app = new ApiAiApp({request: request, response: response});
+   * const WELCOME_INTENT = 'input.welcome';
+   * const NUMBER_INTENT = 'input.number';
+   *
+   * function welcomeIntent (app) {
+   *   app.ask('Welcome to action snippets! Say a number.');
+   * }
+   *
+   * function numberIntent (app) {
+   *   const number = app.getArgument(NUMBER_ARGUMENT);
+   *   app.tell('You said ' + number);
+   * }
+   *
+   * const actionMap = new Map();
+   * actionMap.set(WELCOME_INTENT, welcomeIntent);
+   * actionMap.set(NUMBER_INTENT, numberIntent);
+   * app.handleRequest(actionMap);
+   *
+   * @param {string} argName Name of the argument.
+   * @return {Object} Argument value matching argName
+   *     or null if no matching argument.
+   * @apiai
+   * @actionssdk
+   */
+  getArgumentCommon (argName) {
+    debug('getArgument: argName=%s', argName);
+    if (!argName) {
+      error('Invalid argument name');
+      return null;
+    }
+    const argument = this.findArgument_(argName);
+    if (!argument) {
+      debug('Failed to get argument value: %s', argName);
+      return null;
+    } else if (argument.textValue) {
+      return argument.textValue;
+    } else {
+      if (!this.isNotApiVersionOne_()) {
+        return transformToSnakeCase(argument);
+      } else {
+        return argument;
+      }
+    }
+  }
+
+  /**
+   * Gets transactability of user. Only use after calling
+   * askForTransactionRequirements. Null if no result given.
+   *
+   * @return {string} One of Transactions.ResultType.
+   * @apiai
+   * @actionssdk
+   */
+  getTransactionRequirementsResult () {
+    debug('getTransactionRequirementsResult');
+    const argument = this.findArgument_(this.BuiltInArgNames.TRANSACTION_REQ_CHECK_RESULT);
+    if (argument && argument.extension && argument.extension.resultType) {
+      return argument.extension.resultType;
+    }
+    debug('Failed to get transaction requirements result');
+    return null;
+  }
+
+  /**
+   * Gets order delivery address. Only use after calling askForDeliveryAddress.
+   *
+   * @return {DeliveryAddress} Delivery address information. Null if user
+   *     denies permission, or no address given.
+   * @apiai
+   * @actionssdk
+   */
+  getDeliveryAddress () {
+    debug('getDeliveryAddress');
+    const {
+      DELIVERY_ADDRESS_VALUE,
+      TRANSACTION_DECISION_VALUE
+    } = this.BuiltInArgNames;
+    const argument = this.findArgument_(DELIVERY_ADDRESS_VALUE, TRANSACTION_DECISION_VALUE);
+    if (argument && argument.extension) {
+      if (argument.extension.userDecision === this.Transactions.DeliveryAddressDecision.ACCEPTED) {
+        const { location } = argument.extension;
+        if (!location.postalAddress) {
+          debug('User accepted, but may not have configured address in app');
+          return null;
+        }
+        return location;
+      } else {
+        debug('User rejected giving delivery address');
+        return null;
+      }
+    }
+    debug('Failed to get order delivery address');
+    return null;
+  }
+
+  /**
+   * Gets transaction decision information. Only use after calling
+   * askForTransactionDecision.
+   *
+   * @return {TransactionDecision} Transaction decision data. Returns object with
+   *     userDecision only if user declines. userDecision will be one of
+   *     Transactions.ConfirmationDecision. Null if no decision given.
+   * @apiai
+   * @actionssdk
+   */
+  getTransactionDecision () {
+    debug('getTransactionDecision');
+    const argument = this.findArgument_(this.BuiltInArgNames.TRANSACTION_DECISION_VALUE);
+    if (argument && argument.extension) {
+      return argument.extension;
+    }
+    debug('Failed to get order decision information');
+    return null;
+  }
+
+  /**
+   * Gets confirmation decision. Use after askForConfirmation.
+   *
+   *     False if user replied with negative response. Null if no user
+   *     confirmation decision given.
+   * @apiai
+   * @actionssdk
+   */
+  getUserConfirmation () {
+    debug('getUserConfirmation');
+    const argument = this.findArgument_(this.BuiltInArgNames.CONFIRMATION);
+    if (argument) {
+      return argument.boolValue;
+    }
+    debug('Failed to get confirmation decision information');
+    return null;
+  }
+
+  /**
+   * Gets user provided date and time. Use after askForDateTime.
+   *
+   * @return {DateTime} Date and time given by the user. Null if no user
+   *     date and time given.
+   * @apiai
+   * @actionssdk
+   */
+  getDateTime () {
+    debug('getDateTime');
+    const argument = this.findArgument_(this.BuiltInArgNames.DATETIME);
+    if (argument) {
+      return argument.datetimeValue;
+    }
+    debug('Failed to get date/time information');
+    return null;
+  }
+
+  /**
+   * Gets status of user sign in request.
+   *
+   * @return {string} Result of user sign in request. One of
+   * ApiAiApp.SignInStatus or ActionsSdkApp.SignInStatus
+   * Null if no sign in status.
+   * @apiai
+   * @actionssdk
+   */
+  getSignInStatus () {
+    debug('getSignInStatus');
+    const argument = this.findArgument_(this.BuiltInArgNames.SIGN_IN);
+    if (argument && argument.extension && argument.extension.status) {
+      return argument.extension.status;
+    }
+    debug('Failed to get sign in status');
+    return null;
   }
 
   /**
@@ -1058,14 +1403,38 @@ const AssistantApp = class {
   /**
    * Gets surface capabilities of user device.
    *
-   * Implemented in subclasses for Actions SDK and API.AI.
-   * @return {Object} HTTP response.
+   * @return {Array<string>} Supported surface capabilities, as defined in
+   *     AssistantApp.SurfaceCapabilities.
    * @apiai
    * @actionssdk
    */
   getSurfaceCapabilities () {
     debug('getSurfaceCapabilities');
-    return [];
+    const data = this.requestData();
+    if (!data || !data.surface || !data.surface.capabilities) {
+      error('No surface capabilities in incoming request');
+      return null;
+    }
+    if (data && data.surface && data.surface.capabilities) {
+      return data.surface.capabilities.map(capability => capability.name);
+    } else {
+      error('No surface capabilities in incoming request');
+      return null;
+    }
+  }
+
+  /**
+   * Returns true if the app is being tested in sandbox mode. Enable sandbox
+   * mode in the (Actions console)[console.actions.google.com] to test
+   * transactions.
+   *
+   * @return {boolean} True if app is being used in Sandbox mode.
+   * @apiai
+   * @actionssdk
+   */
+  isInSandbox () {
+    const data = this.requestData();
+    return data && data.isInSandbox;
   }
 
   // ---------------------------------------------------------------------------
@@ -1255,6 +1624,29 @@ const AssistantApp = class {
   }
 
   /**
+   * Find argument with requirements
+   * @param {Array<string>} targets Argument to find
+   * @return {*} The argument
+   */
+  findArgument_ (...targets) {
+    const data = this.requestData();
+    if (data && data.inputs) {
+      for (const input of data.inputs) {
+        if (input.arguments) {
+          for (const argument of input.arguments) {
+            for (const target of targets) {
+              if (argument.name === target) {
+                return argument;
+              }
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * Utility function to detect SSML markup.
    *
    * @param {string} text The text to be checked.
@@ -1264,7 +1656,7 @@ const AssistantApp = class {
   isSsml_ (text) {
     debug('isSsml_: text=%s', text);
     if (!text) {
-      this.handleError_('text can NOT be empty.');
+      error('Text can NOT be empty');
       return false;
     }
     return isSsml(text);
@@ -1504,7 +1896,7 @@ const AssistantApp = class {
     }
     return paymentOptions;
   }
-};
+}
 
 /**
  * Utility class for representing intents by name.
