@@ -961,7 +961,7 @@ export class AssistantApp {
    * @return {DateTime} Date and time given by the user. Null if no user
    *     date and time given.
    */
-  getDateTime(): Date;
+  getDateTime(): DateTime;
 
   /**
    * Gets status of user sign in request.

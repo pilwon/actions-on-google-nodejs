@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import { AssistantApp, DateTime, DeviceLocation, SessionStartedFunction, User } from './assistant-app';
+import { AssistantApp, DeviceLocation, SessionStartedFunction, User } from './assistant-app';
 import { Carousel, List, RichResponse, SimpleResponse } from './response-builder';
 import { TransactionDecision } from './transactions';
 
