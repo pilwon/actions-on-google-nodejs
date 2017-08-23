@@ -21,3 +21,8 @@
     git fetch upstream
     git checkout master
     git merge upstream/master
+    git checkout ts
+
+### Compare
+
+    https://github.com/actions-on-google/actions-on-google-nodejs/compare/<old-commit-hash>...master
