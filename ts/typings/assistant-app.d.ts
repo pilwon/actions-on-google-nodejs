@@ -953,7 +953,7 @@ export class AssistantApp {
    *     False if user replied with negative response. Null if no user
    *     confirmation decision given.
    */
-  getUserConfirmation(): boolean;
+  getUserConfirmation(): boolean | null;
 
   /**
    * Gets user provided date and time. Use after askForDateTime.
