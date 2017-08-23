@@ -93,6 +93,7 @@ export interface ActionPaymentTransactionConfig {
   // The name of the instrument displayed on receipt.
   // For example, for card payment, could be "VISA-1234".
   displayName: string;
+  customerInfoOptions?: CustomerInfoOptions;
 }
 
 /**
@@ -108,22 +109,30 @@ export interface GooglePaymentTransactionConfig {
   cardNetworks: CardNetwork[];
   // True if prepaid cards are not allowed for transaction.
   prepaidCardDisallowed: boolean;
+  customerInfoOptions?: CustomerInfoOptions;
 }
 
 /**
- * Delivery address returned when calling getDeliveryAddress().
+ * Customer information requested as part of the transaction
  */
-export interface DeliveryAddress {
+export interface CustomerInfoOptions {
+  // one of Transactions.CustomerInfoProperties
+  customerInfoProperties: string[];
+}
+
+/**
+ * Generic Location type.
+ */
+export interface Location {
   // Either Transactions.ConfirmationDecision.ACCEPTED
   // or Transactions.ConfirmationDecision.REJECTED.
-  userDecision: ConfirmationDecision;
   postalAddress: {
     regionCode: string;
     languageCode: string;
     postalCode: string;
     administrativeArea: string;
     locality: string;
-    addressLines: string;
+    addressLines: string[];
     recipients: string;
   };
   phoneNumber: string;
@@ -172,7 +181,7 @@ export interface TransactionDecision {
   };
   // The delivery address if user requested.
   // Will appear if userDecision is Transactions.DELIVERY_ADDRESS_UPDATED.
-  deliveryAddress: DeliveryAddress;
+  deliveryAddress: Location;
 }
 
 /**
@@ -291,6 +300,11 @@ export type PaymentType =
   'GIFT_CARD';
 
 /**
+ * List of customer information properties that can be requested.
+ */
+export type CustomerInfoProperties = 'EMAIL';
+
+/**
  * List of possible order confirmation user decisions
  * @enum {string}
  */
@@ -318,10 +332,6 @@ export type ConfirmationDecision =
  * @enum {string}
  */
 export type OrderState =
-  /**
-   * Order was confirmed by user.
-   */
-  'CREATED' |
   /**
    * Order was rejected.
    */
@@ -458,7 +468,7 @@ export type ResultType =
   /**
    * Transactions are not supported for current region/country.
    */
-  'ASSISTANT_SURFACE_NOT_SUPPORTED';
+  'REGION_NOT_SUPPORTED';
 
 /**
  * List of possible user decisions to give delivery address.
@@ -479,10 +489,60 @@ export type DeliveryAddressDecision =
   'REJECTED';
 
 /**
+ * List of possible order location types.
+ * @enum {string}
+ */
+export type LocationType =
+  /**
+   * Unknown.
+   */
+  'UNKNOWN' |
+  /**
+   * Delivery location for an order.
+   */
+  'DELIVERY' |
+  /**
+   * Business location of order provider.
+   */
+  'BUSINESS' |
+  /**
+   * Origin of the order.
+   */
+  'ORIGIN' |
+  /**
+   * Destination of the order.
+   */
+  'DESTINATION';
+
+/**
+ * List of possible order time types.
+ * @enum {string}
+ */
+
+export type TimeType =
+  /**
+   * Unknown.
+   */
+  'UNKNOWN' |
+  /**
+   * Date of delivery for the order.
+   */
+  'DELIVERY_DATE' |
+  /**
+   * Estimated Time of Arrival for order.
+   */
+  'ETA' |
+  /**
+   * Reservation time.
+   */
+  'RESERVATION_SLOT';
+
+/**
  * Values related to supporting transactions.
  * @type {Object}
  */
 export const TransactionValues: {
+
   /**
    * List of transaction card networks available when paying with Google.
    * @enum {string}
@@ -513,6 +573,7 @@ export const TransactionValues: {
      */
     JCB: CardNetwork,
   },
+
   /**
    * List of possible item types.
    * @enum {string}
@@ -551,6 +612,7 @@ export const TransactionValues: {
      */
     FEE: ItemType,
   },
+
   /**
    * List of price types.
    * @enum {string}
@@ -569,6 +631,7 @@ export const TransactionValues: {
      */
     ACTUAL: PriceType,
   },
+
   /**
    * List of possible item types.
    * @enum {string}
@@ -599,6 +662,15 @@ export const TransactionValues: {
      */
     GIFT_CARD: PaymentType,
   },
+
+  /**
+   * List of possible order confirmation user decisions
+   * @enum {string}
+   */
+  readonly CustomerInfoProperties: {
+    EMAIL: CustomerInfoProperties,
+  },
+
   /**
    * List of possible order confirmation user decisions
    * @enum {string}
@@ -622,15 +694,12 @@ export const TransactionValues: {
      */
     CART_CHANGE_REQUESTED: ConfirmationDecision,
   },
+
   /**
    * List of possible order states.
    * @enum {string}
    */
   readonly OrderState: {
-    /**
-     * Order was confirmed by user.
-     */
-    CREATED: OrderState,
     /**
      * Order was rejected.
      */
@@ -656,6 +725,7 @@ export const TransactionValues: {
      */
     FULFILLED: OrderState,
   },
+
   /**
    * List of possible actions to take on the order.
    * @enum {string}
@@ -698,6 +768,7 @@ export const TransactionValues: {
      */
     REVIEW: OrderAction,
   },
+
   /**
    * List of possible types of order rejection.
    * @enum {string}
@@ -712,6 +783,7 @@ export const TransactionValues: {
      */
     PAYMENT_DECLINED: RejectionType,
   },
+
   /**
    * List of possible order state objects.
    * @enum {string}
@@ -742,6 +814,7 @@ export const TransactionValues: {
      */
     RETURN: OrderStateInfo,
   },
+
   /**
    * List of possible order transaction requirements check result types.
    * @enum {string}
@@ -769,6 +842,7 @@ export const TransactionValues: {
      */
     REGION_NOT_SUPPORTED: ResultType,
   },
+
   /**
    * List of possible user decisions to give delivery address.
    * @enum {string}
@@ -787,6 +861,57 @@ export const TransactionValues: {
      */
     REJECTED: DeliveryAddressDecision,
   },
+
+  /**
+   * List of possible user decisions to give delivery address.
+   * @enum {string}
+   */
+  readonly LocationType: {
+    /**
+     * Unknown.
+     */
+    UNKNOWN: LocationType,
+    /**
+     * Delivery location for an order.
+     */
+    DELIVERY: LocationType,
+    /**
+     * Business location of order provider.
+     */
+    BUSINESS: LocationType,
+    /**
+     * Origin of the order.
+     */
+    ORIGIN: LocationType,
+    /**
+     * Destination of the order.
+     */
+    DESTINATION: LocationType,
+  },
+
+  /**
+   * List of possible user decisions to give delivery address.
+   * @enum {string}
+   */
+  readonly TimeType: {
+    /**
+     * Unknown.
+     */
+    UNKNOWN: TimeType,
+    /**
+     * Date of delivery for the order.
+     */
+    DELIVERY_DATE: TimeType,
+    /**
+     * Estimated Time of Arrival for order.
+     */
+    ETA: TimeType,
+    /**
+     * Reservation time.
+     */
+    RESERVATION_SLOT: TimeType,
+  },
+
 }
 
 /**
@@ -877,6 +1002,25 @@ export class Order {
    * @return {Order} Returns current constructed Order.
    */
   setTotalPrice(priceType: PriceType, currencyCode: string, units: number, nanos?: number): Order;
+
+  /**
+   * Adds an associated location to the order. Up to 2 locations can be added.
+   *
+   * @param {string} type One of TransactionValues.LocationType.
+   * @param {Location} location Location to add.
+   * @return {Order} Returns current constructed Order.
+   */
+  addLocation(type: string, location: Location): Order;
+
+  /**
+   * Sets an associated time to the order.
+   *
+   * @param {string} type One of TransactionValues.TimeType.
+   * @param {string} time Time to add. Time should be ISO 8601 representation
+   *     of time value. Could be date, datetime, or duration.
+   * @return {Order} Returns current constructed Order.
+   */
+  setTime(type: string, time: string): Order;
 }
 
 /**
@@ -1122,6 +1266,13 @@ export class OrderUpdate {
    * @type {Price}
    */
   readonly totalPrice: Price;
+
+  /**
+   * Extensions for this order. Used for vertical-specific order attributes,
+   * like times and locations.
+   * @type {Object}
+   */
+  readonly extension: object;
 
   /**
    * Constructor for OrderUpdate.

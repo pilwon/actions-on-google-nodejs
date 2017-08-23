@@ -122,6 +122,12 @@ export class RichResponse {
   addSuggestions(suggestions: string | string[]): RichResponse;
 
   /**
+   * Returns true if the given suggestion text is valid to be added to the suggestion list. A valid
+   * text string is not longer than 25 characters.
+   */
+  isValidSuggestionText(suggestionText: string): boolean;
+
+  /**
    * Sets the suggestion link for this rich response.
    *
    * @param {string} destinationName Name of the link out destination.

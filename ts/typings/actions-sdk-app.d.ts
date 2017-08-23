@@ -2,12 +2,7 @@ import { Request, Response } from 'express';
 
 import { AssistantApp, DateTime, DeviceLocation, SessionStartedFunction, User } from './assistant-app';
 import { Carousel, List, RichResponse, SimpleResponse } from './response-builder';
-import { DeliveryAddress, TransactionDecision } from './transactions';
-
-/**
- * This is the class that handles the converstaion API directly from Assistant, providing
- * implementation for all the methods available in the API.
- */
+import { TransactionDecision } from './transactions';
 
 // ---------------------------------------------------------------------------
 //                   Actions SDK support
@@ -20,21 +15,24 @@ export interface ActionsSdkAppOptions {
 }
 
 /**
- * Constructor for ActionsSdkApp object. To be used in the Actions SDK
- * HTTP endpoint logic.
- *
- * @example
- * const ActionsSdkApp = require('actions-on-google').ActionsSdkApp;
- * const app = new ActionsSdkApp({request: request, response: response,
- *   sessionStarted:sessionStarted});
- *
- * @param {Object} options JSON configuration.
- * @param {Object} options.request Express HTTP request object.
- * @param {Object} options.response Express HTTP response object.
- * @param {Function=} options.sessionStarted Function callback when session starts.
- * @actionssdk
+ * This is the class that handles the conversation API directly from Assistant,
+ * providing implementation for all the methods available in the API.
  */
 export class ActionsSdkApp extends AssistantApp {
+  /**
+  * Constructor for ActionsSdkApp object.
+  * To be used in the Actions SDK HTTP endpoint logic.
+  *
+  * @example
+  * const ActionsSdkApp = require('actions-on-google').ActionsSdkApp;
+  * const app = new ActionsSdkApp({request: request, response: response,
+  *   sessionStarted:sessionStarted});
+  *
+  * @param {Object} options JSON configuration.
+  * @param {Object} options.request Express HTTP request object.
+  * @param {Object} options.response Express HTTP response object.
+  * @param {Function=} options.sessionStarted Function callback when session starts.
+  */
   constructor(options: ActionsSdkAppOptions);
 
   /*
@@ -45,7 +43,6 @@ export class ActionsSdkApp extends AssistantApp {
   * const apiVersion = app.getApiVersion();
   *
   * @return {string} Version value or null if no value.
-  * @actionssdk
   */
   getApiVersion(): string;
 
@@ -57,7 +54,6 @@ export class ActionsSdkApp extends AssistantApp {
    * app.tell('You said ' + app.getRawInput());
    *
    * @return {string} User's raw query or null if no value.
-   * @actionssdk
    */
   getRawInput(): string;
 
@@ -71,133 +67,8 @@ export class ActionsSdkApp extends AssistantApp {
    *
    * @return {Object} JSON object provided to the Assistant in the previous
    *     user turn or {} if no value.
-   * @actionssdk
    */
   getDialogState(): object;
-
-  /**
-   * Gets the {@link User} object.
-   * The user object contains information about the user, including
-   * a string identifier and personal information (requires requesting permissions,
-   * see {@link AssistantApp#askForPermissions|askForPermissions}).
-   *
-   * @example
-   * const app = new ActionsSdkApp({request: request, response: response});
-   * const userId = app.getUser().userId;
-   *
-   * @return {User} Null if no value.
-   * @actionssdk
-   */
-  getUser(): User;
-
-  /**
-   * If granted permission to device's location in previous intent, returns device's
-   * location (see {@link AssistantApp#askForPermissions|askForPermissoins}).
-   * If device info is unavailable, returns null.
-   *
-   * @example
-   * const app = new ActionsSdkApp({request: req, response: res});
-   * app.askForPermission("To get you a ride",
-   *   app.SupportedPermissions.DEVICE_PRECISE_LOCATION);
-   * // ...
-   * // In response handler for subsequent intent:
-   * if (app.isPermissionGranted()) {
-   *   sendCarTo(app.getDeviceLocation().coordinates);
-   * }
-   *
-   * @return {DeviceLocation} Null if location permission is not granted.
-   * @actionssdk
-   */
-  getDeviceLocation(): DeviceLocation;
-
-  /**
-   * Gets transactability of user. Only use after calling
-   * askForTransactionRequirements. Null if no result given.
-   *
-   * @return {string} One of Transactions.ResultType.
-   * @actionssdk
-   */
-  getTransactionRequirementsResult(): string;
-
-  /**
-   * Gets transaction decision information. Only use after calling
-   * askForTransactionDecision.
-   *
-   * @return {TransactionDecision} Transaction decision data. Returns object with
-   *     userDecision. userDecision will be one of
-   *     Transactions.ConfirmationDecision. Null if no decision given.
-   * @actionssdk
-   */
-  getTransactionDecision(): TransactionDecision;
-
-  /**
-   * Gets confirmation decision. Use after askForConfirmation.
-   *
-   * @return {boolean} True if the user replied with affirmative response.
-   *     False if user replied with negative response. Null if no user
-   *     confirmation decision given.
-   * @actionssdk
-   */
-  getUserConfirmation(): boolean;
-
-  /**
-   * Gets user provided date and time. Use after askForDateTime.
-   *
-   * @return {DateTime} Date and time given by the user. Null if no user
-   *     date and time given.
-   * @actionssdk
-   */
-  getDateTime(): DateTime;
-
-  /**
-   * Gets status of user sign in request.
-   *
-   * @return {string} Result of user sign in request. One of
-   *     ActionsSdkApp.SignInStatus. Null if no sign in status.
-   * @actionssdk
-   */
-  getSignInStatus(): string;
-
-  /**
-   * Gets order delivery address. Only use after calling askForDeliveryAddress.
-   *
-   * @return {DeliveryAddress} Delivery address information. Null if user
-   *     denies permission, or no address given.
-   * @actionssdk
-   */
-  getDeliveryAddress(): DeliveryAddress;
-
-  /**
-   * Returns true if the request follows a previous request asking for
-   * permission from the user and the user granted the permission(s). Otherwise,
-   * false. Use with {@link AssistantApp#askForPermissions|askForPermissions}.
-   *
-   * @example
-   * const app = new ActionsSdkApp({request: request, response: response});
-   * app.askForPermissions("To get you a ride", [
-   *   app.SupportedPermissions.NAME,
-   *   app.SupportedPermissions.DEVICE_PRECISE_LOCATION
-   * ]);
-   * // ...
-   * // In response handler for subsequent intent:
-   * if (app.isPermissionGranted()) {
-   *  // Use the requested permission(s) to get the user a ride
-   * }
-   *
-   * @return {boolean} true if permissions granted.
-   * @actionssdk
-   */
-  isPermissionGranted(): boolean;
-
-  /**
-   * Returns true if the app is being tested in sandbox mode. Enable sandbox
-   * mode in the (Actions console)[console.actions.google.com] to test
-   * transactions.
-   *
-   * @return {boolean} True if app is being used in Sandbox mode.
-   * @actionssdk
-   */
-  isInSandbox(): boolean;
 
   /**
    * Gets the "versionLabel" specified inside the Action Package.
@@ -208,7 +79,6 @@ export class ActionsSdkApp extends AssistantApp {
    * const actionVersionLabel = app.getActionVersionLabel();
    *
    * @return {string} The specified version label or null if unspecified.
-   * @actionssdk
    */
   getActionVersionLabel(): string;
 
@@ -221,7 +91,6 @@ export class ActionsSdkApp extends AssistantApp {
    * const conversationId = app.getConversationId();
    *
    * @return {string} Conversation ID or null if no value.
-   * @actionssdk
    */
   getConversationId(): string;
 
@@ -250,27 +119,8 @@ export class ActionsSdkApp extends AssistantApp {
    * app.handleRequest(responseHandler);
    *
    * @return {string} Intent id or null if no value.
-   * @actionssdk
    */
   getIntent(): string;
-
-  /**
-   * Gets surface capabilities of user device.
-   *
-   * @return {Array<string>} Supported surface capabilities, as defined in
-   *     ActionsSdkApp.SurfaceCapabilities.
-   * @actionssdk
-   */
-  getSurfaceCapabilities(): string[];
-
-  /**
-   * Gets type of input used for this request.
-   *
-   * @return {number} One of ActionsSdkApp.InputTypes.
-   *     Null if no input type given.
-   * @actionssdk
-   */
-  getInputType(): number;
 
   /**
    * Get the argument value by name from the current intent. If the argument
@@ -282,7 +132,6 @@ export class ActionsSdkApp extends AssistantApp {
    * @param {string} argName Name of the argument.
    * @return {string} Argument value matching argName
    *     or null if no matching argument.
-   * @actionssdk
    */
   getArgument(argName: string): string;
 
@@ -315,13 +164,14 @@ export class ActionsSdkApp extends AssistantApp {
    *
    * @return {string} Option key of selected item. Null if no option selected or
    *     if current intent is not OPTION intent.
-   * @actionssdk
    */
   getSelectedOption(): string;
 
   /**
    * Asks to collect user's input; all user's queries need to be sent to
    * the app.
+   * {@link https://developers.google.com/actions/policies/general-policies#user_experience|
+   * The guidelines when prompting the user for a response must be followed at all times}.
    *
    * @example
    * const app = new ActionsSdkApp({request: request, response: response});
@@ -356,7 +206,6 @@ export class ActionsSdkApp extends AssistantApp {
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by App.
    * @return The response that is sent to Assistant to ask user to provide input.
-   * @actionssdk
    */
   ask(inputPrompt: object | SimpleResponse | RichResponse, dialogState?: object): object;
 
@@ -398,7 +247,6 @@ export class ActionsSdkApp extends AssistantApp {
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by Assistant.
    * @return The response that is sent to Assistant to ask user to provide input.
-   * @actionssdk
    */
   askWithList(inputPrompt: object | SimpleResponse | RichResponse, list: List, dialogState?: object): object;
 
@@ -432,7 +280,6 @@ export class ActionsSdkApp extends AssistantApp {
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by Assistant.
    * @return {Object} HTTP response.
-   * @apiai
    */
   askForDeliveryAddress(reason: string, dialogState?: object): object;
 
@@ -475,7 +322,6 @@ export class ActionsSdkApp extends AssistantApp {
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by Assistant.
    * @return The response that is sent to Assistant to ask user to provide input.
-   * @actionssdk
    */
   askWithCarousel(inputPrompt: object | SimpleResponse | RichResponse, carousel: Carousel, dialogState?: object): object;
 
@@ -513,7 +359,6 @@ export class ActionsSdkApp extends AssistantApp {
    * @param {string|SimpleResponse|RichResponse} textToSpeech Final response.
    *     Spoken response can be SSML.
    * @return The HTTP response that is sent back to Assistant.
-   * @actionssdk
    */
   tell(textToSpeech: string | SimpleResponse | RichResponse): object;
 
@@ -538,7 +383,6 @@ export class ActionsSdkApp extends AssistantApp {
    * @param {string} initialPrompt The initial prompt the App asks the user.
    * @param {Array<string>=} noInputs Array of re-prompts when the user does not respond (max 3).
    * @return {Object} An {@link https://developers.google.com/actions/reference/conversation#InputPrompt|InputPrompt object}.
-   * @actionssdk
    */
   buildInputPrompt(isSsml: boolean, initialPrompt: string, noInputs: string[]): object;
 }

@@ -12,16 +12,16 @@
 
     git checkout ts
     npm install
-    npm run build
-    # npm run clean
+    npm run ts-build
+    # npm run ts-clean
 
 ### Sync with upstream
 
     git remote add upstream https://github.com/actions-on-google/actions-on-google-nodejs
     git fetch upstream
     git checkout master
-    git merge upstream/master
     git checkout ts
+    git merge upstream/master
 
 ### Compare
 

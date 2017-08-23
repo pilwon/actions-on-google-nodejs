@@ -2,15 +2,7 @@ import { Request, Response } from 'express';
 
 import { BasicCard, Carousel, List, OptionItem, RichResponse } from './response-builder';
 import { ActionPaymentTransactionConfig, Cart, GooglePaymentTransactionConfig,
-         LineItem, Order, OrderUpdate, TransactionValues } from './transactions';
-
-/**
- * The Actions on Google client library AssistantApp base class.
- *
- * This class contains the methods that are shared between platforms to support the conversation API
- * protocol from Assistant. It also exports the 'State' class as a helper to represent states by
- * name.
- */
+         LineItem, Order, OrderUpdate, TransactionDecision, TransactionValues } from './transactions';
 
 /**
  * User provided date/time info.
@@ -233,8 +225,17 @@ export interface AssistantAppOptions {
   sessionStarted?: SessionStartedFunction;
 }
 
+export type AssistantAppRequestData = () => any;
+
 export type RequestHandler = (app: AssistantApp) => any;
 
+/**
+ * The Actions on Google client library AssistantApp base class.
+ *
+ * This class contains the methods that are shared between platforms to support the conversation API
+ * protocol from Assistant. It also exports the 'State' class as a helper to represent states by
+ * name.
+ */
 export class AssistantApp {
   /**
    * The session state.
@@ -249,8 +250,6 @@ export class AssistantApp {
   /**
    * List of standard intents that the app provides.
    * @enum {string}
-   * @actionssdk
-   * @apiai
    */
   readonly StandardIntents: {
     /** App fires MAIN intent for queries like [talk to $app]. */
@@ -278,8 +277,6 @@ export class AssistantApp {
   /**
    * List of supported permissions the app supports.
    * @enum {string}
-   * @actionssdk
-   * @apiai
    */
   readonly SupportedPermissions: {
     /**
@@ -302,8 +299,6 @@ export class AssistantApp {
   /**
    * List of built-in argument names.
    * @enum {string}
-   * @actionssdk
-   * @apiai
    */
   readonly BuiltInArgNames: {
     /** Permission granted argument. */
@@ -328,8 +323,6 @@ export class AssistantApp {
    * List of possible conversation stages, as defined in the
    * {@link https://developers.google.com/actions/reference/conversation#Conversation|Conversation object}.
    * @enum {number}
-   * @actionssdk
-   * @apiai
    */
   readonly ConversationStages: {
     /**
@@ -349,8 +342,6 @@ export class AssistantApp {
   /**
    * List of surface capabilities supported by the app.
    * @enum {string}
-   * @actionssdk
-   * @apiai
    */
   readonly SurfaceCapabilities: {
     /**
@@ -366,8 +357,6 @@ export class AssistantApp {
   /**
    * List of possible user input types.
    * @enum {number}
-   * @actionssdk
-   * @apiai
    */
   readonly InputTypes: {
     /**
@@ -391,8 +380,6 @@ export class AssistantApp {
   /**
    * List of possible sign in result status values.
    * @enum {string}
-   * @actionssdk
-   * @apiai
    */
   readonly SignInStatus: {
     // Unknown status.
@@ -411,17 +398,22 @@ export class AssistantApp {
    */
   readonly Transactions: typeof TransactionValues;
 
+  readonly requestData: AssistantAppRequestData;
+
   /**
    * Constructor for AssistantApp object.
    * Should not be instantiated; rather instantiate one of the subclasses
+   *
    * {@link ActionsSdkApp} or {@link ApiAiApp}.
    *
    * @param {Object} options JSON configuration.
    * @param {Object} options.request Express HTTP request object.
    * @param {Object} options.response Express HTTP response object.
    * @param {Function=} options.sessionStarted Function callback when session starts.
+   * @param {function(): *} requestData Function that returns the
+   *     request data object to be processed.
    */
-  constructor(options: AssistantAppOptions);
+  constructor(options: AssistantAppOptions, requestData: AssistantAppRequestData);
 
   // ---------------------------------------------------------------------------
   //                   Public APIs
@@ -479,8 +471,6 @@ export class AssistantApp {
    * app.handleRequest(actionMap);
    *
    * @param {(Function|Map)} handler The handler (or Map of handlers) for the request.
-   * @actionssdk
-   * @apiai
    */
   handleRequest(handler?: RequestHandler | Map<string, RequestHandler>): void;
 
@@ -535,8 +525,6 @@ export class AssistantApp {
    *     will be circulated back by Assistant. Used in {@link ActionsSdkAssistant}.
    * @return A response is sent to Assistant to ask for the user's permission; for any
    *     invalid input, we return null.
-   * @actionssdk
-   * @apiai
    */
   askForPermissions(context: string, permissions: string[], dialogState?: object): object;
 
@@ -577,8 +565,6 @@ export class AssistantApp {
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by Assistant. Used in {@link ActionsSdkAssistant}.
    * @return {Object} HTTP response.
-   * @actionssdk
-   * @apiai
    */
   askForTransactionRequirements(transactionConfig?: ActionPaymentTransactionConfig | GooglePaymentTransactionConfig, dialogState?: object): object;
 
@@ -618,7 +604,6 @@ export class AssistantApp {
    *     options and order options.
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by Assistant. Used in {@link ActionsSdkAssistant}.
-   * @apiai
    */
   askForTransactionDecision(order: object, transactionConfig?: ActionPaymentTransactionConfig | GooglePaymentTransactionConfig, dialogState?: object): object;
 
@@ -637,8 +622,8 @@ export class AssistantApp {
    * Read more:
    *
    * * {@link https://developers.google.com/actions/reference/conversation#ExpectedIntent|Supported Permissions}
-   * * Check if the permission has been granted with {@link ActionsSdkApp#isPermissionGranted|isPermissionsGranted}
-   * * {@link ActionsSdkApp#getDeviceLocation|getDeviceLocation}
+   * * Check if the permission has been granted with {@link AssistantApp#isPermissionGranted|isPermissionsGranted}
+   * * {@link AssistantApp#getDeviceLocation|getDeviceLocation}
    * * {@link AssistantApp#getUserName|getUserName}
    *
    * @example
@@ -673,10 +658,31 @@ export class AssistantApp {
    *     will be circulated back by Assistant.
    * @return A response is sent to the Assistant to ask for the user's permission;
    *     for any invalid input, we return null.
-   * @actionssdk
-   * @apiai
    */
   askForPermission(context: string, permission: string, dialogState?: object): object;
+
+  /**
+   * Returns true if the request follows a previous request asking for
+   * permission from the user and the user granted the permission(s). Otherwise,
+   * false. Use with {@link AssistantApp#askForPermissions|askForPermissions}.
+   *
+   * @example
+   * const app = new ActionsSdkApp({request: request, response: response});
+   * // or
+   * const app = new ApiAiApp({request: request, response: response});
+   * app.askForPermissions("To get you a ride", [
+   *   app.SupportedPermissions.NAME,
+   *   app.SupportedPermissions.DEVICE_PRECISE_LOCATION
+   * ]);
+   * // ...
+   * // In response handler for subsequent intent:
+   * if (app.isPermissionGranted()) {
+   *  // Use the requested permission(s) to get the user a ride
+   * }
+   *
+   * @return {boolean} true if permissions granted.
+   */
+  isPermissionGranted(): boolean;
 
   /**
    * Asks user for a confirmation.
@@ -708,8 +714,6 @@ export class AssistantApp {
    *     Google will use a generic yes/no prompt.
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by Assistant. Used in {@link ActionsSdkAssistant}.
-   * @actionssdk
-   * @apiai
    */
   askForConfirmation(prompt?: string, dialogState?: object): object;
 
@@ -752,13 +756,19 @@ export class AssistantApp {
    *     generic prompt.
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by Assistant. Used in {@link ActionsSdkAssistant}.
-   * @actionssdk
-   * @apiai
    */
   askForDateTime(initialPrompt?: string, datePrompt?: string, timePrompt?: string, dialogState?: object): object;
 
   /**
-   * Asks user for a timezone-agnostic date and time.
+   * Hands the user off to a web sign in flow. App sign in and OAuth credentials
+   * are set in the {@link https://console.actions.google.com|Actions Console}.
+   * Retrieve the access token in subsequent intents using
+   * app.getUser().accessToken.
+   *
+   * Note: Currently this API requires enabling the app for Transactions APIs.
+   * To do this, fill out the App Info section of the Actions Console project
+   * and check the box indicating the use of Transactions under "Privacy and
+   * consent".
    *
    * @example
    * const app = new ApiAiApp({ request, response });
@@ -785,10 +795,24 @@ export class AssistantApp {
    *
    * @param {Object=} dialogState JSON object the app uses to hold dialog state that
    *     will be circulated back by Assistant. Used in {@link ActionsSdkAssistant}.
-   * @actionssdk
-   * @apiai
    */
   askForSignIn(dialogState?: object): object;
+
+  /**
+   * Gets the {@link User} object.
+   * The user object contains information about the user, including
+   * a string identifier and personal information (requires requesting permissions,
+   * see {@link AssistantApp#askForPermissions|askForPermissions}).
+   *
+   * @example
+   * const app = new ApiAiApp({request: request, response: response});
+   * // or
+   * const app = new ActionsSdkApp({request: request, response: response});
+   * const userId = app.getUser().userId;
+   *
+   * @return {User} Null if no value.
+   */
+  getUser(): User;
 
   /**
    * If granted permission to user's name in previous intent, returns user's
@@ -818,10 +842,134 @@ export class AssistantApp {
    * actionMap.set(SAY_NAME_ACTION, sayName);
    * app.handleRequest(actionMap);
    * @return {UserName} Null if name permission is not granted.
-   * @actionssdk
-   * @apiai
    */
-  getUserName(): string;
+  getUserName(): UserName;
+
+  /**
+   * Gets the user locale. Returned string represents the regional language
+   * information of the user set in their Assistant settings.
+   * For example, 'en-US' represents US English.
+   *
+   * @example
+   * const app = new ApiAiApp({request, response});
+   * const locale = app.getUserLocale();
+   *
+   * @return {string} User's locale, e.g. 'en-US'. Null if no locale given.
+   */
+  getUserLocale(): string;
+
+  /**
+   * If granted permission to device's location in previous intent, returns device's
+   * location (see {@link AssistantApp#askForPermissions|askForPermissions}).
+   * If device info is unavailable, returns null.
+   *
+   * @example
+   * const app = new ApiAiApp({request: req, response: res});
+   * // or
+   * const app = new ActionsSdkApp({request: req, response: res});
+   * app.askForPermission("To get you a ride",
+   *   app.SupportedPermissions.DEVICE_PRECISE_LOCATION);
+   * // ...
+   * // In response handler for permissions fallback intent:
+   * if (app.isPermissionGranted()) {
+   *   sendCarTo(app.getDeviceLocation().coordinates);
+   * }
+   *
+   * @return {DeviceLocation} Null if location permission is not granted.
+   */
+  getDeviceLocation(): DeviceLocation;
+
+  /**
+   * Gets type of input used for this request.
+   *
+   * @return {number} One of AssistantApp.InputTypes.
+   *     Null if no input type given.
+   */
+  getInputType(): number;
+
+  /**
+   * Get the argument value by name from the current intent.
+   * If the argument is included in originalRequest, and is not a text argument,
+   * the entire argument object is returned.
+   *
+   * Note: If incoming request is using an API version under 2 (e.g. 'v1'),
+   * the argument object will be in Proto2 format (snake_case, etc).
+   *
+   * @example
+   * const app = new ApiAiApp({request: request, response: response});
+   * const WELCOME_INTENT = 'input.welcome';
+   * const NUMBER_INTENT = 'input.number';
+   *
+   * function welcomeIntent (app) {
+   *   app.ask('Welcome to action snippets! Say a number.');
+   * }
+   *
+   * function numberIntent (app) {
+   *   const number = app.getArgument(NUMBER_ARGUMENT);
+   *   app.tell('You said ' + number);
+   * }
+   *
+   * const actionMap = new Map();
+   * actionMap.set(WELCOME_INTENT, welcomeIntent);
+   * actionMap.set(NUMBER_INTENT, numberIntent);
+   * app.handleRequest(actionMap);
+   *
+   * @param {string} argName Name of the argument.
+   * @return {Object} Argument value matching argName
+   *     or null if no matching argument.
+   */
+  getArgumentCommon(argName): object;
+
+  /**
+   * Gets transactability of user. Only use after calling
+   * askForTransactionRequirements. Null if no result given.
+   *
+   * @return {string} One of Transactions.ResultType.
+   */
+  getTransactionRequirementsResult(): string;
+
+  /**
+   * Gets order delivery address. Only use after calling askForDeliveryAddress.
+   *
+   * @return {DeliveryAddress} Delivery address information. Null if user
+   *     denies permission, or no address given.
+   */
+  getDeliveryAddress(): Location;
+
+  /**
+   * Gets transaction decision information. Only use after calling
+   * askForTransactionDecision.
+   *
+   * @return {TransactionDecision} Transaction decision data. Returns object with
+   *     userDecision only if user declines. userDecision will be one of
+   *     Transactions.ConfirmationDecision. Null if no decision given.
+   */
+  getTransactionDecision(): TransactionDecision;
+
+  /**
+   * Gets confirmation decision. Use after askForConfirmation.
+   *
+   *     False if user replied with negative response. Null if no user
+   *     confirmation decision given.
+   */
+  getUserConfirmation(): boolean;
+
+  /**
+   * Gets user provided date and time. Use after askForDateTime.
+   *
+   * @return {DateTime} Date and time given by the user. Null if no user
+   *     date and time given.
+   */
+  getDateTime(): Date;
+
+  /**
+   * Gets status of user sign in request.
+   *
+   * @return {string} Result of user sign in request. One of
+   * ApiAiApp.SignInStatus or ActionsSdkApp.SignInStatus
+   * Null if no sign in status.
+   */
+  getSignInStatus(): string;
 
   /**
    * Returns true if user device has a given surface capability.
@@ -843,21 +991,25 @@ export class AssistantApp {
    * const actionMap = new Map();
    * actionMap.set(DESCRIBE_SOMETHING, describe);
    * app.handleRequest(actionMap);
-   *
-   * @apiai
-   * @actionssdk
    */
   hasSurfaceCapability(requestedCapability: string): boolean;
 
   /**
    * Gets surface capabilities of user device.
    *
-   * Implemented in subclasses for Actions SDK and API.AI.
-   * @return {Object} HTTP response.
-   * @apiai
-   * @actionssdk
+   * @return {Array<string>} Supported surface capabilities, as defined in
+   *                         AssistantApp.SurfaceCapabilities.
    */
-  getSurfaceCapabilities(): object;
+  getSurfaceCapabilities(): string[];
+
+  /**
+   * Returns true if the app is being tested in sandbox mode. Enable sandbox
+   * mode in the (Actions console)[console.actions.google.com] to test
+   * transactions.
+   *
+   * @return {boolean} True if app is being used in Sandbox mode.
+   */
+  isInSandbox(): boolean;
 
   // ---------------------------------------------------------------------------
   //                   Response Builders
